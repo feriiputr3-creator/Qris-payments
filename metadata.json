@@ -1,0 +1,6 @@
+{
+  "name": "Takeaway elc payment gateaway",
+  "description": "Static to Dynamic QRIS payment gateway with admin manual verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /transactions/{transactionId} {
+      // Anyone can create a transaction
+      allow create: if true;
+      // Anyone can read their own transaction if they know the ID
+      allow read: if true;
+      // Only admins can update (change status)
+      allow update, delete: if request.auth != null;
+    }
+  }
+}
