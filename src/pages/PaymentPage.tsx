@@ -5,6 +5,16 @@ import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+const ACCOUNT_DETAILS: Record<string, string> = {
+  'BCA': '8640680416',
+  'BRI': '017201085210500',
+  'BLU BCA': '006980006709',
+  'SUPERBANK': '000003499084',
+  'JAGO': '105063618131',
+  'GOPAY': '083110723422',
+  'DANA': '082228350934'
+};
+
 export default function PaymentPage() {
   const { id } = useParams();
   const [tx, setTx] = useState<any>(null);
@@ -84,17 +94,56 @@ export default function PaymentPage() {
             </p>
           </div>
 
-          {/* QR Code */}
+          {/* Payment Method Details */}
           {tx.status === 'PENDING' && (
-            <div className="flex flex-col items-center">
-              {tx.qris_payload ? (
-                <div className="p-5 bg-white border border-slate-200 shadow-sm rounded-2xl inline-block">
-                  <QRCodeSVG value={tx.qris_payload} size={224} level="M" includeMargin={false} />
-                </div>
+            <div className="flex flex-col items-center w-full">
+              {(!tx.payment_method || tx.payment_method === 'QRIS') ? (
+                <>
+                  {tx.qris_payload ? (
+                    <div className="p-5 bg-white border border-slate-200 shadow-sm rounded-2xl inline-block">
+                      <QRCodeSVG value={tx.qris_payload} size={224} level="M" includeMargin={false} />
+                    </div>
+                  ) : (
+                    <div className="w-56 h-56 bg-slate-100 animate-pulse rounded-2xl" />
+                  )}
+                  <p className="text-sm text-slate-500 mt-5 text-center font-medium">Scan this QR code using your mobile banking or e-wallet app.</p>
+                </>
               ) : (
-                <div className="w-56 h-56 bg-slate-100 animate-pulse rounded-2xl" />
+                <div className="w-full bg-white border border-slate-200 shadow-sm rounded-2xl p-6 text-left">
+                  <h3 className="font-bold text-slate-900 mb-4 text-center border-b border-slate-100 pb-4 font-display uppercase tracking-wider text-sm">Bank Transfer</h3>
+                  <div className="space-y-4 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-500">Bank</span>
+                      <span className="font-bold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{tx.payment_method}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-500">Account Number</span>
+                      <span className="font-bold font-mono text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg select-all cursor-pointer">
+                        {ACCOUNT_DETAILS[tx.payment_method] || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-500">Account Name</span>
+                      <span className="font-bold text-slate-900 uppercase">Feri</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-6 text-center font-medium bg-slate-50 py-2 rounded-lg border border-slate-100">
+                    Use the exact details above to complete your transfer.
+                  </p>
+                </div>
               )}
-              <p className="text-sm text-slate-500 mt-5 text-center font-medium">Scan this QR code using your mobile banking or e-wallet app.</p>
+              
+              <div className="w-full mt-6">
+                <a 
+                  href={`https://wa.me/6283110723422?text=${encodeURIComponent(`Halo Feri, berikut adalah bukti pembayaran saya:\n\nBase Amount: Rp ${tx.base_amount?.toLocaleString('id-ID')}\nUnique Code: +${tx.unique_code}\n*Total Transfer: Rp ${tx.total_amount?.toLocaleString('id-ID')}*\n\nMetode Pembayaran: ${tx.payment_method}`)}`}
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                  Kirim Bukti via WhatsApp
+                </a>
+              </div>
             </div>
           )}
         </div>
