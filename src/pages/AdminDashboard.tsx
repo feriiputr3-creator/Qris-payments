@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Check, X, LogOut, FileImage, ShieldCheck, Activity, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Filter, Check, X, LogOut, ShieldCheck, Activity, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -12,7 +12,6 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('ALL');
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
@@ -149,7 +148,6 @@ export default function AdminDashboard() {
                   <th className="px-6 py-5">ID / Date</th>
                   <th className="px-6 py-5">Customer</th>
                   <th className="px-6 py-5">Amount</th>
-                  <th className="px-6 py-5">Proof</th>
                   <th className="px-6 py-5">Status</th>
                   <th className="px-6 py-5 text-right">Actions</th>
                 </tr>
@@ -174,17 +172,6 @@ export default function AdminDashboard() {
                     <td className="px-6 py-5">
                       <div className="font-bold font-display text-slate-900">{formatRupiah(tx.total_amount)}</div>
                       <div className="text-[11px] text-slate-500 font-medium mt-1">Code: +{tx.unique_code}</div>
-                    </td>
-                    <td className="px-6 py-5">
-                      {tx.proof_image_path ? (
-                        <button onClick={() => setPreviewImage(tx.proof_image_path)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors">
-                          <FileImage size={14} /> View
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg text-xs font-medium border border-slate-100 border-dashed">
-                          None
-                        </span>
-                      )}
                     </td>
                     <td className="px-6 py-5">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase
@@ -278,22 +265,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-      </div>
-      
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setPreviewImage(null)}>
-          <div className="relative bg-slate-900 p-2 rounded-2xl max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl border border-slate-700" onClick={e => e.stopPropagation()}>
-            <button 
-              onClick={() => setPreviewImage(null)} 
-              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 p-2 rounded-full text-white backdrop-blur-md transition-colors"
-            >
-              <X size={20} />
-            </button>
-            <img src={previewImage} alt="Payment Proof" className="w-full h-full object-contain rounded-xl max-h-[85vh]" />
-          </div>
-        </div>
-      )}
+    </div>
     </div>
   );
 }

@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
-import { Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export default function PaymentPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [tx, setTx] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadError, setUploadError] = useState('');
 
   // Real-time listener for Firestore
   useEffect(() => {
@@ -25,70 +21,6 @@ export default function PaymentPage() {
 
     return () => unsub();
   }, [id]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file || !id) return;
-    setUploading(true);
-    setUploadError('');
-
-    try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = async () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800; // compress dimension
-          let scaleSize = 1;
-          
-          if (img.width > MAX_WIDTH) {
-            scaleSize = MAX_WIDTH / img.width;
-          }
-          
-          canvas.width = img.width * scaleSize;
-          canvas.height = img.height * scaleSize;
-          
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          // Generate compressed base64 string
-          const base64String = canvas.toDataURL('image/jpeg', 0.6);
-
-          try {
-            await updateDoc(doc(db, 'transactions', id), {
-              proof_image_path: base64String // Keep property name compatible
-            });
-          } catch (err: any) {
-            setUploadError(err.message || 'An error occurred during upload');
-          } finally {
-            setUploading(false);
-          }
-        };
-        img.onerror = () => {
-          setUploadError('Failed to load image for compression');
-          setUploading(false);
-        };
-        if (event.target?.result) {
-          img.src = event.target.result as string;
-        }
-      };
-      
-      reader.onerror = () => {
-        setUploadError('Failed to read file');
-        setUploading(false);
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (err: any) {
-      setUploadError(err.message || 'An error occurred');
-      setUploading(false);
-    }
-  };
 
   if (!tx) {
     return (
@@ -165,49 +97,6 @@ export default function PaymentPage() {
               <p className="text-sm text-slate-500 mt-5 text-center font-medium">Scan this QR code using your mobile banking or e-wallet app.</p>
             </div>
           )}
-
-          {/* Upload Proof */}
-          {tx.status === 'PENDING' && (
-            <div className="border-t border-slate-100 pt-8">
-              <h3 className="text-sm font-bold text-slate-900 mb-4 font-display uppercase tracking-wider">Upload Proof</h3>
-              
-              {tx.proof_image_path ? (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-                  <CheckCircle className="text-slate-900 mx-auto mb-3" size={28} />
-                  <p className="text-sm text-slate-900 font-bold">Proof Uploaded</p>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">Waiting for manual verification by Admin...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {uploadError && <p className="text-red-600 text-xs font-medium bg-red-50 p-2 rounded-lg">{uploadError}</p>}
-                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors group">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 group-hover:scale-105 transition-transform border border-slate-100">
-                        <Upload className="w-5 h-5 text-slate-600" />
-                      </div>
-                      <p className="mb-1 text-sm text-slate-700 font-bold">Click to upload image</p>
-                      <p className="text-xs text-slate-500 font-medium">PNG, JPG up to 5MB</p>
-                    </div>
-                    <input type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleFileChange} />
-                  </label>
-                  
-                  {file && (
-                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                      <span className="text-sm font-medium truncate text-slate-700 max-w-[180px] pl-2">{file.name}</span>
-                      <button 
-                        onClick={handleUpload}
-                        disabled={uploading}
-                        className="bg-slate-900 text-white font-medium text-xs px-5 py-2.5 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                      >
-                        {uploading ? 'Uploading...' : 'Upload Now'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          
         </div>
       </div>
     </div>
