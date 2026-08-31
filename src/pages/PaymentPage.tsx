@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { QRCodeSVG } from 'qrcode.react';
-import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Download } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -18,6 +18,8 @@ const ACCOUNT_DETAILS: Record<string, string> = {
 export default function PaymentPage() {
   const { id } = useParams();
   const [tx, setTx] = useState<any>(null);
+
+  const [copiedType, setCopiedType] = useState<string | null>(null);
 
   // Real-time listener for Firestore
   useEffect(() => {
@@ -39,6 +41,36 @@ export default function PaymentPage() {
       </div>
     );
   }
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedType(type);
+    setTimeout(() => setCopiedType(null), 2000);
+  };
+
+  const downloadQR = () => {
+    const canvas = document.getElementById('qris-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    // Create padded canvas for better scanning
+    const paddedCanvas = document.createElement('canvas');
+    const padding = 20;
+    paddedCanvas.width = canvas.width + (padding * 2);
+    paddedCanvas.height = canvas.height + (padding * 2);
+    
+    const ctx = paddedCanvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
+      ctx.drawImage(canvas, padding, padding);
+    }
+    
+    const pngUrl = paddedCanvas.toDataURL('image/png');
+    const downloadLink = document.createElement("a");
+    downloadLink.href = pngUrl;
+    downloadLink.download = `QRIS-${tx.id.substring(0, 8)}.png`;
+    downloadLink.click();
+  };
 
   const formatRupiah = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -100,8 +132,16 @@ export default function PaymentPage() {
               {(!tx.payment_method || tx.payment_method === 'QRIS') ? (
                 <>
                   {tx.qris_payload ? (
-                    <div className="p-5 bg-white border border-slate-200 shadow-sm rounded-2xl inline-block">
-                      <QRCodeSVG value={tx.qris_payload} size={224} level="M" includeMargin={false} />
+                    <div className="flex flex-col items-center">
+                      <div className="p-5 bg-white border border-slate-200 shadow-sm rounded-2xl inline-block relative">
+                        <QRCodeCanvas id="qris-canvas" value={tx.qris_payload} size={224} level="M" includeMargin={false} />
+                      </div>
+                      <button 
+                        onClick={downloadQR}
+                        className="mt-4 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm w-full"
+                      >
+                        <Download size={16} /> Download QR Code
+                      </button>
                     </div>
                   ) : (
                     <div className="w-56 h-56 bg-slate-100 animate-pulse rounded-2xl" />
@@ -118,13 +158,37 @@ export default function PaymentPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-slate-500">Account Number</span>
-                      <span className="font-bold font-mono text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg select-all cursor-pointer">
-                        {ACCOUNT_DETAILS[tx.payment_method] || '-'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold font-mono text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg select-all">
+                          {ACCOUNT_DETAILS[tx.payment_method] || '-'}
+                        </span>
+                        <button 
+                          onClick={() => copyToClipboard(ACCOUNT_DETAILS[tx.payment_method] || '', 'account')}
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center justify-center"
+                          title="Copy Account Number"
+                        >
+                          {copiedType === 'account' ? <CheckCircle size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                        </button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-slate-500">Account Name</span>
                       <span className="font-bold text-slate-900 uppercase">Feri</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-500">Transfer Amount</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold font-mono text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg select-all">
+                          {formatRupiah(tx.total_amount)}
+                        </span>
+                        <button 
+                          onClick={() => copyToClipboard(tx.total_amount.toString(), 'amount')}
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center justify-center"
+                          title="Copy Transfer Amount"
+                        >
+                          {copiedType === 'amount' ? <CheckCircle size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-6 text-center font-medium bg-slate-50 py-2 rounded-lg border border-slate-100">
