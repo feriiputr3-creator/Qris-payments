@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 
 export default function PaymentPage() {
   const { id } = useParams();
@@ -39,17 +38,54 @@ export default function PaymentPage() {
     setUploadError('');
 
     try {
-      const storageRef = ref(storage, `proofs/${id}_${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800; // compress dimension
+          let scaleSize = 1;
+          
+          if (img.width > MAX_WIDTH) {
+            scaleSize = MAX_WIDTH / img.width;
+          }
+          
+          canvas.width = img.width * scaleSize;
+          canvas.height = img.height * scaleSize;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Generate compressed base64 string
+          const base64String = canvas.toDataURL('image/jpeg', 0.6);
 
-      await updateDoc(doc(db, 'transactions', id), {
-        proof_image_path: downloadURL
-      });
+          try {
+            await updateDoc(doc(db, 'transactions', id), {
+              proof_image_path: base64String // Keep property name compatible
+            });
+          } catch (err: any) {
+            setUploadError(err.message || 'An error occurred during upload');
+          } finally {
+            setUploading(false);
+          }
+        };
+        img.onerror = () => {
+          setUploadError('Failed to load image for compression');
+          setUploading(false);
+        };
+        if (event.target?.result) {
+          img.src = event.target.result as string;
+        }
+      };
       
+      reader.onerror = () => {
+        setUploadError('Failed to read file');
+        setUploading(false);
+      };
+      
+      reader.readAsDataURL(file);
     } catch (err: any) {
-      setUploadError(err.message || 'An error occurred during upload');
-    } finally {
+      setUploadError(err.message || 'An error occurred');
       setUploading(false);
     }
   };
